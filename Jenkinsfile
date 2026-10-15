@@ -68,30 +68,36 @@ pipeline {
             }
         }
 
-        stage('Deploy to Kubernetes') {
-            steps {
-                withCredentials([
-                    file(
-                        credentialsId: 'kubeconfig',
-                        variable: 'KUBECONFIG_FILE'
-                    )
-                ]) {
-                    script {
-                        try {
-                            bat 'set KUBECONFIG=%KUBECONFIG_FILE% && kubectl set image deployment/%K8S_DEPLOYMENT% bookstore=%DH_USER%/%IMAGE_NAME%:%BUILD_NUMBER%'
-                            bat 'set KUBECONFIG=%KUBECONFIG_FILE% && kubectl rollout status deployment/%K8S_DEPLOYMENT% --timeout=180s'
-                        } catch (err) {
-                            echo 'Deployment failed. Attempting automatic rollback.'
+       
+stage('Deploy to Kubernetes') {
+    steps {
+        withCredentials([
+            usernamePassword(
+                credentialsId: 'Dockerhub-credentials',
+                usernameVariable: 'DH_USER',
+                passwordVariable: 'DH_TOKEN'
+            ),
+            file(
+                credentialsId: 'kubeconfig',
+                variable: 'KUBECONFIG_FILE'
+            )
+        ]) {
+            script {
+                try {
+                    bat 'set KUBECONFIG=%KUBECONFIG_FILE% && kubectl set image deployment/%K8S_DEPLOYMENT% bookstore=%DH_USER%/%IMAGE_NAME%:%BUILD_NUMBER%'
+                    bat 'set KUBECONFIG=%KUBECONFIG_FILE% && kubectl rollout status deployment/%K8S_DEPLOYMENT% --timeout=180s'
+                } catch (err) {
+                    echo 'Deployment failed. Attempting automatic rollback.'
 
-                            bat 'set KUBECONFIG=%KUBECONFIG_FILE% && kubectl rollout undo deployment/%K8S_DEPLOYMENT%'
-                            bat 'set KUBECONFIG=%KUBECONFIG_FILE% && kubectl rollout status deployment/%K8S_DEPLOYMENT% --timeout=180s'
+                    bat 'set KUBECONFIG=%KUBECONFIG_FILE% && kubectl rollout undo deployment/%K8S_DEPLOYMENT%'
+                    bat 'set KUBECONFIG=%KUBECONFIG_FILE% && kubectl rollout status deployment/%K8S_DEPLOYMENT% --timeout=180s'
 
-                            error('Deployment failed. Rollback attempted.')
-                        }
-                    }
+                    error('Deployment failed. Rollback attempted.')
                 }
             }
         }
+    }
+}
 
         stage('Verify Deployment') {
             steps {
