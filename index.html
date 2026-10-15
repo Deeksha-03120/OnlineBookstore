@@ -1,0 +1,168 @@
+ 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Bookstore</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 25px;
+            background: #f5f5f5;
+        }
+        h1, h2 { color: #333; }
+        input, select, button {
+            padding: 10px;
+            margin: 5px;
+        }
+        .books {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+        }
+        .book {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 6px;
+        }
+        button {
+            cursor: pointer;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:disabled {
+            background: gray;
+            cursor: not-allowed;
+        }
+        section {
+            background: white;
+            padding: 15px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Online Bookstore</h1>
+<p>Search books, add them to your cart, and place an order.</p>
+
+<input id="search" type="text" placeholder="Search by title or author">
+<select id="category">
+    <option value="All">All Categories</option>
+    <option value="Programming">Programming</option>
+    <option value="Fiction">Fiction</option>
+    <option value="Science">Science</option>
+    <option value="Self-Help">Self-Help</option>
+</select>
+
+<h2>Available Books</h2>
+<div id="books" class="books"></div>
+
+<section>
+    <h2>Shopping Cart</h2>
+    <div id="cart">Your cart is empty.</div>
+    <p id="total">Total: ₹0</p>
+    <button onclick="placeOrder()">Place Order</button>
+    <p id="orderStatus"></p>
+</section>
+
+<script>
+const books = [
+    {id: 1, title: "Clean Code", author: "Robert C. Martin", category: "Programming", price: 550, stock: 5},
+    {id: 2, title: "The Alchemist", author: "Paulo Coelho", category: "Fiction", price: 300, stock: 4},
+    {id: 3, title: "Introduction to Algorithms", author: "Thomas H. Cormen", category: "Programming", price: 750, stock: 0},
+    {id: 4, title: "A Brief History of Time", author: "Stephen Hawking", category: "Science", price: 420, stock: 3},
+    {id: 5, title: "Atomic Habits", author: "James Clear", category: "Self-Help", price: 399, stock: 6},
+    {id: 6, title: "Wings of Fire", author: "A.P.J. Abdul Kalam", category: "Science", price: 250, stock: 2}
+];
+
+let cart = [];
+
+function displayBooks() {
+    const search = document.getElementById("search").value.toLowerCase();
+    const category = document.getElementById("category").value;
+
+    const filtered = books.filter(book =>
+        (book.title.toLowerCase().includes(search) ||
+         book.author.toLowerCase().includes(search)) &&
+        (category === "All" || book.category === category)
+    );
+
+    document.getElementById("books").innerHTML = filtered.map(book => `
+        <div class="book">
+            <h3>${book.title}</h3>
+            <p>Author: ${book.author}</p>
+            <p>Category: ${book.category}</p>
+            <p>Price: ₹${book.price}</p>
+            <p>Availability: ${book.stock > 0 ? book.stock + " in stock" : "Out of stock"}</p>
+            <button onclick="addToCart(${book.id})" ${book.stock === 0 ? "disabled" : ""}>
+                Add to Cart
+            </button>
+        </div>
+    `).join("") || "<p>No books found.</p>";
+}
+
+function addToCart(id) {
+    const book = books.find(item => item.id === id);
+    const quantity = cart.filter(item => item.id === id).length;
+
+    if (quantity >= book.stock) {
+        alert("Available stock limit reached.");
+        return;
+    }
+
+    cart.push(book);
+    displayCart();
+}
+
+function displayCart() {
+    document.getElementById("cart").innerHTML = cart.length
+        ? cart.map((book, index) =>
+            `<p>${book.title} — ₹${book.price}
+            <button onclick="removeFromCart(${index})">Remove</button></p>`
+          ).join("")
+        : "Your cart is empty.";
+
+    const total = cart.reduce((sum, book) => sum + book.price, 0);
+    document.getElementById("total").textContent = "Total: ₹" + total;
+}
+
+function removeFromCart(index) {
+    cart.splice(index, 1);
+    displayCart();
+}
+
+function placeOrder() {
+    if (cart.length === 0) {
+        document.getElementById("orderStatus").textContent =
+            "Please add a book before placing an order.";
+        return;
+    }
+
+    cart.forEach(item => {
+        books.find(book => book.id === item.id).stock--;
+    });
+
+    const orderId = "BOOK-" + Date.now().toString().slice(-6);
+    cart = [];
+    displayCart();
+    displayBooks();
+
+    document.getElementById("orderStatus").textContent =
+        "Order placed successfully! Order ID: " + orderId +
+        ". Status: Confirmed. Thank you for shopping with us!";
+}
+
+document.getElementById("search").addEventListener("input", displayBooks);
+document.getElementById("category").addEventListener("change", displayBooks);
+
+displayBooks();
+</script>
+
+</body>
+</html>
+ 
