@@ -6,6 +6,7 @@ pipeline {
         IMAGE_NAME = 'online-bookstore'
         K8S_DEPLOYMENT = 'online-bookstore'
         K8S_SERVICE = 'online-bookstore-service'
+        PYTHON_EXE = 'C:\\Users\\SENTHIL\\AppData\\Local\\Programs\\Python\\Python313\\python.exe'
     }
 
     stages {
@@ -17,7 +18,7 @@ pipeline {
 
         stage('Automated Tests') {
             steps {
-                bat 'python -m unittest discover -s tests -v'
+                bat '"%PYTHON_EXE%" -m unittest discover -s tests -v'
             }
         }
 
