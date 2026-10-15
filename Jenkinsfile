@@ -1,4 +1,4 @@
- 
+
 pipeline {
     agent any
 
@@ -7,6 +7,7 @@ pipeline {
         K8S_DEPLOYMENT = 'online-bookstore'
         K8S_SERVICE = 'online-bookstore-service'
         PYTHON_EXE = 'C:\\Users\\SENTHIL\\AppData\\Local\\Programs\\Python\\Python313\\python.exe'
+        DOCKER_SCOUT_EXE = 'C:\\Users\\SENTHIL\\.docker\\cli-plugins\\docker-scout.exe'
     }
 
     stages {
@@ -46,7 +47,7 @@ pipeline {
                         passwordVariable: 'DH_TOKEN'
                     )
                 ]) {
-                    bat 'docker scout cves --exit-code --only-severity critical,high %DH_USER%/%IMAGE_NAME%:%BUILD_NUMBER%'
+                    bat '"%DOCKER_SCOUT_EXE%" cves --exit-code --only-severity critical,high %DH_USER%/%IMAGE_NAME%:%BUILD_NUMBER%'
                 }
             }
         }
@@ -70,11 +71,6 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 withCredentials([
-                    usernamePassword(
-                        credentialsId: 'Dockerhub-credentials',
-                        usernameVariable: 'DH_USER',
-                        passwordVariable: 'DH_TOKEN'
-                    ),
                     file(
                         credentialsId: 'kubeconfig',
                         variable: 'KUBECONFIG_FILE'
@@ -96,11 +92,35 @@ pipeline {
                 }
             }
         }
+
+        stage('Verify Deployment') {
+            steps {
+                withCredentials([
+                    file(
+                        credentialsId: 'kubeconfig',
+                        variable: 'KUBECONFIG_FILE'
+                    )
+                ]) {
+                    bat 'set KUBECONFIG=%KUBECONFIG_FILE% && kubectl get deployment %K8S_DEPLOYMENT%'
+                    bat 'set KUBECONFIG=%KUBECONFIG_FILE% && kubectl get pods -l app=online-bookstore'
+                    bat 'set KUBECONFIG=%KUBECONFIG_FILE% && kubectl get service %K8S_SERVICE%'
+                    bat 'set KUBECONFIG=%KUBECONFIG_FILE% && kubectl rollout status deployment/%K8S_DEPLOYMENT% --timeout=180s'
+                }
+            }
+        }
     }
 
     post {
         always {
             echo 'Online Bookstore pipeline finished.'
+        }
+
+        success {
+            echo 'All tests and security checks passed. Deployment completed successfully.'
+        }
+
+        failure {
+            echo 'Pipeline failed. Check Console Output to identify the failed stage.'
         }
     }
 }
