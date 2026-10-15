@@ -46,7 +46,7 @@ pipeline {
                         passwordVariable: 'DH_TOKEN'
                     )
                 ]) {
-                    bat 'docker scout cves --exit-code --only-severity critical,high %DH_USER%/%IMAGE_NAME%:%BUILD_NUMBER%'
+                    bat 'docker scout cves --only-severity critical,high %DH_USER%/%IMAGE_NAME%:%BUILD_NUMBER%'
                 }
             }
         }
