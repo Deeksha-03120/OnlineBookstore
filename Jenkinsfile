@@ -1,4 +1,4 @@
-
+ 
 pipeline {
     agent any
 
@@ -31,7 +31,7 @@ pipeline {
                         passwordVariable: 'DH_TOKEN'
                     )
                 ]) {
-                    bat 'docker build -t %DH_USER%/%IMAGE_NAME%:%BUILD_NUMBER% .'
+                    bat 'docker build --no-cache -t %DH_USER%/%IMAGE_NAME%:%BUILD_NUMBER% .'
                     bat 'docker tag %DH_USER%/%IMAGE_NAME%:%BUILD_NUMBER% %DH_USER%/%IMAGE_NAME%:latest'
                 }
             }
@@ -46,12 +46,12 @@ pipeline {
                         passwordVariable: 'DH_TOKEN'
                     )
                 ]) {
-                    bat 'docker scout cves --only-severity critical,high %DH_USER%/%IMAGE_NAME%:%BUILD_NUMBER%'
+                    bat 'docker scout cves --exit-code --only-severity critical,high %DH_USER%/%IMAGE_NAME%:%BUILD_NUMBER%'
                 }
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Push Image to Docker Hub') {
             steps {
                 withCredentials([
                     usernamePassword(
@@ -85,8 +85,11 @@ pipeline {
                             bat 'set KUBECONFIG=%KUBECONFIG_FILE% && kubectl set image deployment/%K8S_DEPLOYMENT% bookstore=%DH_USER%/%IMAGE_NAME%:%BUILD_NUMBER%'
                             bat 'set KUBECONFIG=%KUBECONFIG_FILE% && kubectl rollout status deployment/%K8S_DEPLOYMENT% --timeout=180s'
                         } catch (err) {
+                            echo 'Deployment failed. Attempting automatic rollback.'
+
                             bat 'set KUBECONFIG=%KUBECONFIG_FILE% && kubectl rollout undo deployment/%K8S_DEPLOYMENT%'
                             bat 'set KUBECONFIG=%KUBECONFIG_FILE% && kubectl rollout status deployment/%K8S_DEPLOYMENT% --timeout=180s'
+
                             error('Deployment failed. Rollback attempted.')
                         }
                     }
